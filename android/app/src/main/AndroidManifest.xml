@@ -1,8 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <application
-        android:label="caller_app"
+        android:label="Lead Hornet"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/lead_hornet">
         <activity
             android:name=".MainActivity"
             android:exported="true"
