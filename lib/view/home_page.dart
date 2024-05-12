@@ -4,14 +4,29 @@ import 'dart:math';
 import 'package:call_log/call_log.dart';
 import 'package:caller_app/view/profile_page.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'bodies/contacts_body.dart';
-import 'bodies/recent_body.dart';
+import 'widgets/contacts_body.dart';
+import 'widgets/recent_body.dart';
+import 'widgets/sliver_list.dart';
 import 'chat_page.dart';
+
+
+// {entry.formattedNumber}', ),
+// {entry.cachedMatchedNumber}', ),
+// {entry.number}', ),
+// {entry.name}',),
+// {entry.callType}', ),
+// {DateTime.fromMillisecondsSinceEpoch(entry.timestamp!)}',),
+// {entry.duration}', ),
+// {entry.phoneAccountId}', ),
+// {entry.simDisplayName}', ),
+
 
 
 class HomeEpigle extends StatefulWidget {
@@ -27,36 +42,44 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
   late Animation _animation;
   List<CallLogEntry> callLogEntries= [];
   List<List<CallLogEntry>> groups= [];
+  List<Map<String, List<CallLogEntry>>> groups1 = [];
+  final GlobalKey _tweenKey = GlobalKey();
 
   @override
   void initState() {
     // TODO: implement initState
     _currentIndex = 0;
-
-
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),
+      duration: const Duration(seconds: 5),
 
     );
-    _animation = Tween<Offset>(
-      begin: const Offset(0.0, -1.0), // Start position (top)
-      end: const Offset(0.0, 0.0),    // End position (center)
-    ).animate(_controller);
+    // _animation = Tween<Offset>(
+    //   begin: const Offset(0.0, -1.0), // Start position (top)
+    //   end: const Offset(0.0, 0.0),    // End position (center)
+    // ).animate(_controller);
     getCalls();
     print("Call log entries length = ${callLogEntries.length}");
-
-
-    _controller.forward(from: 0.7);
+    // _controller.forward(from: 0.7);
     // init();
     super.initState();
   }
+
   void getCalls() async {
     callLogEntries = (await CallLog.get()).toList();
-    int k = 0;
-    while((k++) < 40)
-    print('${callLogEntries[0].name!}  ----- ${callLogEntries[0].number!} -----  ${DateTime.fromMicrosecondsSinceEpoch(callLogEntries[0].timestamp!)} -----  ${callLogEntries[0].callType}');
+
+
+
+    int k = 1;
+    if(k == 1) {
+      k = 0;
+      print("First Entry:");
+      print('${callLogEntries[0].name!}  ----- ${callLogEntries[0]
+          .number!} -----  ${DateTime.fromMicrosecondsSinceEpoch(
+          callLogEntries[0].timestamp!)} -----  ${callLogEntries[0].callType}');
+    }
     groupCalls();
+    saveCalls();
     // setState(() {});
   }
 
@@ -66,27 +89,66 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
     ),);
   }
 
-  void groupCalls(){
+  void saveCalls() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.clear();
+    // for (var entry in callLogEntries) {
+    //   prefs.setStringList('@${entry.timestamp}', ['${entry.number}', '${entry.name}', '${entry.callType}', '${entry.timestamp}', '${entry.duration}', '${entry.cachedMatchedNumber}',  '${entry.cachedNumberLabel}', '${entry.cachedNumberType}', '${entry.formattedNumber}', '${entry.phoneAccountId}', '${entry.simDisplayName}']);
+    // }
+  }
+  void groupCalls()   {
+    // SharedPreferences prefs = await SharedPreferences.getInstance();
     Map<String, List<CallLogEntry>> keyMap = {};
-    int k = 0;
+
     for (var entry in callLogEntries) {
+      // prefs.setStringList('@${entry.timestamp}', ['${entry.number}', '${entry.name}', '${entry.callType}', '${entry.timestamp}', '${entry.duration}', '${entry.cachedMatchedNumber}',  '${entry.cachedNumberLabel}', '${entry.cachedNumberType}', '${entry.formattedNumber}', '${entry.phoneAccountId}', '${entry.simDisplayName}']);
+
       // Check if name is null
 
       var date = DateTime.fromMillisecondsSinceEpoch(entry.timestamp!);
-      while((k++)<30) {
-        print("Name + date ${entry.name} ${date}");
-      }
+      // while((k++)<30) {
+      //   print("Name + date ${entry.name} ${date}");
+      // }
       String key = '${entry.number}_${date.year}-${date.month}-${date.day}';
       if(keyMap.containsKey(key)) {
-        keyMap[key]?.add(entry);
+        // if(k < 15) {
+        //   if (kDebugMode) {
+        //     print("${entry.name ??
+        //       ""}   $key added  - - - - - - - - - - - - - -  ${getTime(
+        //       date)}   $k");
+        //   }
+        // }
+        // k++;
+        keyMap[key]!.add(entry);
       }
       else {
-        keyMap[key] = [];
+        keyMap[key] = [entry];
       }
     }
     groups = keyMap.values.toList();
   }
 
+  void groupByCalls(){
+    Map<String, Map<String, List<CallLogEntry>>> keyMap = {};
+    int k = 0;
+    for (var entry in callLogEntries) {
+      var date = DateTime.fromMillisecondsSinceEpoch(entry.timestamp!);
+      String key = '${date.year}/${date.month}/${date.day}';
+      if(keyMap.containsKey(key)) {
+        String number = entry.number.toString();
+        if(keyMap[key]!.containsKey(number)) {
+          keyMap[key]?[number]!.add(entry);
+        }
+        else {
+          keyMap[key]?[number] = [entry];
+        }
+      }
+      else {
+        keyMap[key] = {entry.number.toString() :  [entry]};
+      }
+    }
+    groups1 = keyMap.values.toList();
+  }
   @override
   void dispose() {
     // TODO: implement dispose
@@ -94,68 +156,134 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
     super.dispose();
   }
 
+  String? getTime(DateTime time) {
+    int h = time.hour;
+    int m = time.minute;
+    if(h >= 12) {
+      if(h != 12) {
+        h-= 12;
+      }
+
+      return "${h.toString().length == 1 ? '0': ''}$h:${m.toString().length == 1 ? '0': ''}$m PM";
+    }
+    else {
+      if(h == 0) {
+        h+=12;
+      }
+      return "${h.toString().length == 1 ? '0': ''}$h:${m.toString().length == 1 ? '0': ''}$m AM";
+    }
+  }
 
   Widget _buildIconButton({required Widget icon, required int index}) {
-    // print("Index = $index SleectedIndex = $selectedIndex");
-    int x = (selectedIndex - index);
-
-    print("X = $x");
-    final double angle = 2 * pi * (x-2) / 8;
-    // print("X=$x Angle=$angle");
+    final double totalIcons = 8; // Change this to the total number of icons
     final double radius = MediaQuery.of(context).size.width * 0.88 / 2.59;
-    print("Offset = ${radius * cos(angle)} ${radius * sin(angle)}");
-    final double offsetX = 0 + radius * cos(angle);
-    final double offsetY = 0 + radius * sin(angle);
-    final double angle2 = 2 * pi * (index) / 8;
-    print("Offset = ${radius * cos(angle2)} ${radius * sin(angle2)}");
-    final double offsetX2 = 0 + radius * cos(angle2);
-    final double offsetY2 = 0 + radius * sin(angle2);
 
 
-    return
-
-      Transform.translate(
-
-        offset: Offset(
-            radius*cos(angle*_controller.value),radius*sin(angle*_controller.value)
-        ),
-        child: IconButton(
-          iconSize: 14,
-          // style: ElevatedButton.styleFrom(
-          //   padding: EdgeInsets.all(20)
-          //
-          // ),
+    // Animation am = Tween<double>(begin:  (index -1), end: index.toDouble() ).animate(_controller);
+    // CurvedAnimation _c = CurvedAnimation( parent: _controller, curve: Curves.easeIn);
 
 
+    // return TweenAnimationBuilder(
+    //   // key: _tweenKey,
+    //
+    //
+    //   curve: Curves.easeIn,
+    //   tween: am.,
+    //   duration:  Duration(seconds: 5),
+    //   builder : (context, _ , child) {
+        double angle = 2 * pi * (selectedIndex - index - 2) / totalIcons;
+        // double animValue = Curves.easeInOutBack.transform(_controller.value);
+        double offsetX = 0 + radius * cos(angle );
+        double offsetY = 0 + radius * sin(angle );
+
+        return Transform.translate(
+          offset: Offset(offsetX, offsetY),
+          child: IconButton(
+            iconSize: 14,
+            onPressed: () {
+              // _c.drive(CurveTween(curve: Curves.easeIn));
+              setState(() {
+                // _controller.forward(from: 0);
+              });
+              // _controller.forward(from: 0.7);
 
 
-          onPressed: () {
-            selectedIndex = index;
-            _controller.forward(from: 0);
-            // setState(() {
-            //   _controller.forward(from: 0);
-            // _controller.animateTo(1, curve: Curves.easeIn);
-            // _controller.animateTo(1, curve: Curves.easeIn);
-            // if (index % 3 == 0) {
-            //   _currentIndex = 0;
-            //   // _pageController.jumpToPage(0);
-            // }
-            // else if (index % 3 == 1) {
-            //   _currentIndex = 1;
-            //   // _pageController.jumpToPage(1);
-            // }
-            // else {
-            //   _currentIndex = 2;
-            //   // _pageController.jumpToPage(2);
-            // }
-            //   print("Selected Index = $selectedIndex");
-            //   print("----------------SET STATED---------\n\n");
-            // });
-          },
-          icon: icon,
-        ),
-      );
+              selectedIndex = index;
+
+              // setState(() {
+              //   selectedIndex = index;
+              //   // Maybe you don't need to call _controller.forward again here
+              // });
+            },
+            icon: icon,
+          ),
+        );
+    //   }
+    // );
   }
+
+  // Widget _buildIconButton({required Widget icon, required int index}) {
+  //   // print("Index = $index SleectedIndex = $selectedIndex");
+  //   int x = (selectedIndex - index);
+  //
+  //   print("X = $x");
+  //   final double angle = 2 * pi * (x-2) / 8;
+  //   // print("X=$x Angle=$angle");
+  //   final double radius = MediaQuery.of(context).size.width * 0.88 / 2.59;
+  //   print("Offset = ${radius * cos(angle)} ${radius * sin(angle)}");
+  //   final double offsetX = 0 + radius * cos(angle);
+  //   final double offsetY = 0 + radius * sin(angle);
+  //   final double angle2 = 2 * pi * (index) / 8;
+  //   print("Offset = ${radius * cos(angle2)} ${radius * sin(angle2)}");
+  //   final double offsetX2 = 0 + radius * cos(angle2);
+  //   final double offsetY2 = 0 + radius * sin(angle2);
+  //
+  //
+  //   return
+  //
+  //     Transform.translate(
+  //
+  //       offset: Offset(
+  //           radius*cos(angle),radius*sin(angle)
+  //       ),
+  //       child: IconButton(
+  //         iconSize: 14,
+  //         // style: ElevatedButton.styleFrom(
+  //         //   padding: EdgeInsets.all(20)
+  //         //
+  //         // ),
+  //
+  //
+  //
+  //
+  //         onPressed: () {
+  //           selectedIndex = index;
+  //           _controller.forward(from: 0.7);
+  //           setState(() {
+  //             _controller.forward(from: 0.7);
+  //           });
+  //           // _controller.animateTo(1, curve: Curves.easeIn);
+  //           // _controller.animateTo(1, curve: Curves.easeIn);
+  //           // if (index % 3 == 0) {
+  //           //   _currentIndex = 0;
+  //           //   // _pageController.jumpToPage(0);
+  //           // }
+  //           // else if (index % 3 == 1) {
+  //           //   _currentIndex = 1;
+  //           //   // _pageController.jumpToPage(1);
+  //           // }
+  //           // else {
+  //           //   _currentIndex = 2;
+  //           //   // _pageController.jumpToPage(2);
+  //           // }
+  //           //   print("Selected Index = $selectedIndex");
+  //           //   print("----------------SET STATED---------\n\n");
+  //           // });
+  //         },
+  //         icon: icon,
+  //       ),
+  //     );
+  // }
 
 
 
@@ -365,15 +493,16 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
               slivers:[
                 SliverAppBar(
                   // title: Text('Hello'),
-                  // pinned: true,
+                  pinned: true,
                   floating: true,
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.white,
-                  // expandedHeight: 50,
-                  collapsedHeight: 100, //70 for only recent calls
+                  expandedHeight: 150,
+                  // collapsedHeight: 60,
+                  // collapsedHeight: 40, //70 for only recent calls
 
                   surfaceTintColor: Colors.white,
-                  toolbarHeight: 64,
+                  toolbarHeight: 84,
                   leading:
                   (0 == 0)  ?
                   IconButton(
@@ -410,7 +539,7 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
                   ),
                   bottom:
                   PreferredSize(
-                    preferredSize: const Size.fromHeight(50),
+                    preferredSize: const Size.fromHeight(110),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       child: Column(
@@ -424,7 +553,8 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
                                 fontSize: 24,
                                 fontWeight: FontWeight.w500,
                               ),
-                              hintText: '',
+                              floatingLabelBehavior: FloatingLabelBehavior.never,
+                              hintText: 'Search for a number',
                               fillColor: Colors.white,
                               filled: true,
                               suffixIcon: IconButton(
@@ -443,14 +573,15 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
                           ),
                           const SizedBox(height: 6,),
                           const Divider(
-                            height: 0.31,
-                            color: Color(0xff9B98A4),
-                          ),
+                              height: 0.31,
+                              color: Color(0xff9B98A4),
+                            ),
+
                           const SizedBox(height: 8,),
                           Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(25),
+                                borderRadius: BorderRadius.circular(10),
                                 color: const Color(0xffE7E6EE),
                               ),
                               child: const Text(
@@ -458,7 +589,7 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
                                 // today == _listdate ? "Today" : (_listdate == yest ? "Yesterday" : _listdate),
                                 style: TextStyle(
                                   color: Colors.black,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                 ),
                               )),
                         ],
@@ -803,42 +934,62 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
           //     },
           //   ),
           // ),
+          ///
+          // Positioned(
+          //   left: MediaQuery.of(context).size.width * 0.07,
+          //   right: MediaQuery.of(context).size.width * 0.07,
+          //   bottom: -((MediaQuery.of(context).size.width * 0.86)* 0.71),
+          //   // bottom: 0,
+          //   child: Container(
+          //
+          //     width: MediaQuery.of(context).size.width * 0.88,
+          //     height: MediaQuery.of(context).size.width * 0.88,
+          //     decoration: const BoxDecoration(
+          //       shape: BoxShape.circle,
+          //       color: Color(0xffE7E6EE),
+          //     ),
+          //     child:
+          //     Padding(
+          //       padding:EdgeInsets.only(left: MediaQuery.of(context).size.width/2.6, top: MediaQuery.of(context).size.width/2.6),
+          //       child: Stack(
+          //           children: [
+          //             for(int index = 0; index < 8; index++)
+          //               _buildIconButton(
+          //                   icon: SvgPicture.asset(
+          //                       'assets/icons/${iconType[index %
+          //                           3]}_nav.svg'),
+          //                   index: index)
+          //           ]
+          //       ),
+          //     ),
+          //   ),
+          // ),
           Positioned(
             left: MediaQuery.of(context).size.width * 0.07,
             right: MediaQuery.of(context).size.width * 0.07,
-            bottom: -((MediaQuery.of(context).size.width * 0.86)* 0.71),
-            // bottom: 0,
+            // bottom: -((MediaQuery.of(context).size.width * 0.86)* 0.71),
+            bottom: 0,
             child: Container(
-
               width: MediaQuery.of(context).size.width * 0.88,
               height: MediaQuery.of(context).size.width * 0.88,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Color(0xffE7E6EE),
-
               ),
               child:
-
-
-              Align(
-                alignment: Alignment.center,
+              Padding(
+                padding: const EdgeInsets.only(left : 140, top:  140),
                 child: Stack(
-
                     children: [
-
                       for(int index = 0; index < 8; index++)
                         _buildIconButton(
                             icon: SvgPicture.asset(
                                 'assets/icons/${iconType[index %
                                     3]}_nav.svg'),
                             index: index)
-
                     ]
-
-
                 ),
               ),
-
             ),
           ),
           Positioned(
@@ -856,336 +1007,3 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
   }
 }
 
-class SliverListT extends StatelessWidget {
-  final List<List<CallLogEntry>> groups;
-  final List<Color> codes = [const Color(0xff00821e), const Color(0xff7c0082),const Color(0xff210082),const Color(0xff668200),const Color(0xff820000)];
-  SliverListT({super.key, required this.groups});
-
-  String? getTime(DateTime time) {
-    int h = time.hour;
-    int m = time.minute;
-    if(h >= 12) {
-      if(h != 12) {
-        h-= 12;
-      }
-
-      return "${h.toString().length == 1 ? '0': ''}$h:${m.toString().length == 1 ? '0': ''}$m PM";
-    }
-    else {
-      if(h == 0) {
-        h+=12;
-      }
-      return "${h.toString().length == 1 ? '0': ''}$h:${m.toString().length == 1 ? '0': ''}$m AM";
-    }
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    // void showSnackbar(String message) {
-    //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-    //     content: Text(message),
-    //   ));
-    // }
-    // return FutureBuilder(
-    //   future: CallLog.get(),
-    //   builder: (context, snapshot) {
-    //
-    //     // Check if number is null
-    //
-    //
-    //
-    //     if(snapshot.connectionState == ConnectionState.done) {
-          return
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-              childCount: groups.length,
-              (context, index) {
-
-            // Check if number is null
-
-
-            if (index >= groups.length)
-              return const SizedBox(height: 0,);
-            print("Length is: ${groups[index].length}");
-            if (groups[index].isEmpty)
-              return const SizedBox(height: 0,);
-
-            if (groups[index].isNotEmpty) {
-              // _date = DateTime.fromMillisecondsSinceEpoch(
-              //     groups[index][0].timestamp!);
-              // _listdate = "${_date.day}-${_date.month}-${_date.year}";
-            }
-            var firstEntry = groups[index][0];
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal:21.0),
-              child: Ink(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: Colors.white,
-                ),
-                child: InkWell(
-                  onTap: () {
-                    // Navigator.push(context, MaterialPageRoute(builder: (context) =>DialerPage()));
-                  },
-                  child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                                radius: 26.44,
-                                // backgroundImage: AssetImage('assets/images/face1.jpeg'),
-                                backgroundColor: codes[Random().nextInt(5)].withOpacity(0.4),
-                                child: Text(
-                                  firstEntry.name == null || firstEntry.name == "" ? "" : ((firstEntry.name).toString())[0].toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                )
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(left: 12.75),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-
-                                  SizedBox(
-                                    width: MediaQuery.of(context).size.width * 0.5,
-                                    child: Text(
-                                      (firstEntry.name!.isEmpty ? (firstEntry.number): firstEntry.name).toString(),
-                                      style: const TextStyle(
-                                          fontSize: 16.59,
-                                          fontWeight: FontWeight.w400,
-                                          color: Color(0xff676578)
-                                      ),
-                                      softWrap: true,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  (firstEntry.name!.isNotEmpty) ?
-                                  Row(
-                                    children: [
-                                      Text(firstEntry.number.toString(),
-                                        style: const TextStyle(
-                                            fontSize: 12.44,
-                                            fontWeight: FontWeight.w400,
-                                            color: Color(0xff9B98A4)
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      (groups[index].length > 1) ?
-                                      Text(
-                                        "(${groups[index].length})",
-                                        style: const TextStyle(
-                                            fontSize: 12.44,
-                                            fontWeight: FontWeight.w400,
-                                            color: Color(0xff9B98A4)
-                                        ),
-                                      ) :const SizedBox(height: 0),
-                                    ],
-                                  ):const SizedBox(height: 0),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(
-                          width: 85,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-
-                              SizedBox(
-                                height: 14,
-                                width: 14,
-                                child: SvgPicture.asset(
-                                  firstEntry.callType == CallType.outgoing
-                                      ? 'assets/icons/outgoing.svg'
-                                      :
-                                  (firstEntry.callType == CallType.incoming ?
-                                  'assets/icons/incoming.svg' :
-                                  'assets/icons/missed.svg'),
-                                  color:
-                                  firstEntry.callType == CallType.missed
-                                      ? const Color(0xffE85461)
-                                      : const Color(0xff93CB80),
-                                  fit: BoxFit.scaleDown,
-                                ),
-                              ),
-
-                              Text(
-                                getTime(DateTime.fromMillisecondsSinceEpoch(firstEntry.timestamp!))!,
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w400,
-                                    color: Color(0xff9B98A4)
-                                ),
-                              ),
-
-                            ],
-                          ),
-                        ),
-                      ]
-                  ),
-                ),
-              ),
-            );
-          })
-            // );}
-          // }
-          // else {
-          //   return  SliverToBoxAdapter(child: Center(child: CircularProgressIndicator(),));
-          // }
-
-
-      // },
-      // child: SliverList(
-      //   delegate: SliverChildBuilderDelegate(
-      //       childCount: groups.length,
-      //
-      //           (context, index) {
-      //
-      //         // Check if number is null
-      //
-      //
-      //         if (index >= groups.length)
-      //           return const SizedBox(height: 0,);
-      //         print("Length is: ${groups[index].length}");
-      //         if (groups[index].isEmpty)
-      //           return const SizedBox(height: 0,);
-      //
-      //         if (groups[index].isNotEmpty) {
-      //           // _date = DateTime.fromMillisecondsSinceEpoch(
-      //           //     groups[index][0].timestamp!);
-      //           // _listdate = "${_date.day}-${_date.month}-${_date.year}";
-      //         }
-      //         var firstEntry = groups[index][0];
-      //         return Padding(
-      //
-      //           padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal:21.0),
-      //           child: Ink(
-      //             decoration: BoxDecoration(
-      //               borderRadius: BorderRadius.circular(10),
-      //               color: Colors.white,
-      //             ),
-      //             child: InkWell(
-      //               onTap: () {
-      //                 // Navigator.push(context, MaterialPageRoute(builder: (context) =>DialerPage()));
-      //               },
-      //               child: Row(
-      //                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      //                   children: [
-      //                     Row(
-      //                       children: [
-      //                         CircleAvatar(
-      //                             radius: 26.44,
-      //                             // backgroundImage: AssetImage('assets/images/face1.jpeg'),
-      //                             backgroundColor: codes[Random().nextInt(5)].withOpacity(0.4),
-      //                             child: Text(
-      //                               firstEntry.name == null || firstEntry.name == "" ? "" : ((firstEntry.name).toString())[0].toUpperCase(),
-      //                               style: const TextStyle(
-      //                                 fontSize: 18,
-      //                                 fontWeight: FontWeight.w600,
-      //                                 color: Colors.white,
-      //                               ),
-      //                             )
-      //                         ),
-      //                         Padding(
-      //                           padding: const EdgeInsets.only(left: 12.75),
-      //                           child: Column(
-      //                             crossAxisAlignment: CrossAxisAlignment.start,
-      //                             children: [
-      //
-      //                               SizedBox(
-      //                                 width: MediaQuery.of(context).size.width * 0.5,
-      //                                 child: Text(
-      //                                   (firstEntry.name ?? (firstEntry.number ?? "")).toString(),
-      //                                   style: const TextStyle(
-      //                                       fontSize: 16.59,
-      //                                       fontWeight: FontWeight.w400,
-      //                                       color: Color(0xff676578)
-      //                                   ),
-      //                                   softWrap: true,
-      //                                   overflow: TextOverflow.ellipsis,
-      //                                 ),
-      //                               ),
-      //                               (firstEntry.name != null) ?
-      //                               Row(
-      //                                 children: [
-      //                                   Text(firstEntry.number.toString(),
-      //                                     style: const TextStyle(
-      //                                         fontSize: 12.44,
-      //                                         fontWeight: FontWeight.w400,
-      //                                         color: Color(0xff9B98A4)
-      //                                     ),
-      //                                   ),
-      //                                   const SizedBox(width: 6),
-      //                                   (groups[index].length > 1) ?
-      //                                   Text(
-      //                                     "(${groups[index].length})",
-      //                                     style: const TextStyle(
-      //                                         fontSize: 12.44,
-      //                                         fontWeight: FontWeight.w400,
-      //                                         color: Color(0xff9B98A4)
-      //                                     ),
-      //                                   ) :const SizedBox(height: 0),
-      //                                 ],
-      //                               ):const SizedBox(height: 0),
-      //                             ],
-      //                           ),
-      //                         ),
-      //                       ],
-      //                     ),
-      //                     SizedBox(
-      //                       width: 85,
-      //                       child: Row(
-      //                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      //                         children: [
-      //
-      //                           SizedBox(
-      //                             height: 14,
-      //                             width: 14,
-      //                             child: SvgPicture.asset(
-      //                               firstEntry.callType == CallType.outgoing
-      //                                   ? 'assets/icons/outgoing.svg'
-      //                                   :
-      //                               (firstEntry.callType == CallType.incoming ?
-      //                               'assets/icons/incoming.svg' :
-      //                               'assets/icons/missed.svg'),
-      //                               color:
-      //                               firstEntry.callType == CallType.missed
-      //                                   ? const Color(0xffE85461)
-      //                                   : const Color(0xff93CB80),
-      //                               fit: BoxFit.scaleDown,
-      //                             ),
-      //                           ),
-      //
-      //                           Text(
-      //                             getTime(DateTime.fromMillisecondsSinceEpoch(firstEntry.timestamp!))!,
-      //                             style: const TextStyle(
-      //                                 fontSize: 12,
-      //                                 fontWeight: FontWeight.w400,
-      //                                 color: Color(0xff9B98A4)
-      //                             ),
-      //                           ),
-      //
-      //                         ],
-      //                       ),
-      //                     ),
-      //                   ]
-      //               ),
-      //             ),
-      //           ),
-      //         );
-      //       }
-      //
-      //   ),
-      //
-      //
-      // ),
-    );
-  }
-}

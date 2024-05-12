@@ -1,7 +1,13 @@
+import 'package:caller_app/services/background_service.dart';
 import 'package:caller_app/view/home_page.dart';
+import 'package:caller_app/view/login_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  // initializeService();
   runApp(const MyApp());
 }
 
@@ -32,7 +38,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const HomeEpigle(),
+      home: HomeEpigle(),
     );
   }
 }
