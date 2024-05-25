@@ -2,6 +2,7 @@
 import 'dart:math';
 
 import 'package:call_log/call_log.dart';
+import 'package:caller_app/models/call_log_data_entry.dart';
 import 'package:caller_app/view/profile_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -11,6 +12,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/callLog_service.dart';
 import 'widgets/contacts_body.dart';
 import 'widgets/recent_body.dart';
 import 'widgets/sliver_list.dart';
@@ -67,6 +69,69 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
 
   void getCalls() async {
     callLogEntries = (await CallLog.get()).toList();
+    // for(int i= 0; i < 0; i++) {
+    //   var entry = callLogEntries[i];
+    //   if(kDebugMode) {
+    //     print('-------------------------------------');
+    //     print('F. NUMBER  : ${entry.formattedNumber}');
+    //     print('C.M. NUMBER: ${entry.cachedMatchedNumber}');
+    //     print('NUMBER     : ${entry.number}');
+    //     print('NAME       : ${entry.name}');
+    //     print('TYPE       : ${entry.callType}');
+    //     print('DATE       : ${DateTime.fromMillisecondsSinceEpoch(
+    //         entry.timestamp!)}');
+    //     print('DURATION   : ${entry.duration}');
+    //     print('ACCOUNT ID : ${entry.phoneAccountId}');
+    //     print('ACCOUNT ID : ${entry.phoneAccountId}');
+    //     print('SIM NAME   : ${entry.simDisplayName}');
+    //
+    //     print('-------------------------------------');
+    //   }
+    // }
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    if(!pref.containsKey("count")) {
+      pref.setString("count", callLogEntries.length.toString());
+    }
+
+    String count = (pref.getString("count")!);
+    if (kDebugMode) {
+      print(DateTime.fromMillisecondsSinceEpoch(callLogEntries[0].timestamp!).toString());
+    }
+    if(true) {
+      pref.setString("count", callLogEntries.length.toString());
+      List<CallDatum> callDatumList = [];
+      int i = 0;
+      for(CallLogEntry entry in callLogEntries) {
+        if(i == 5) break;
+        callDatumList.add(CallDatum(
+            callFrom: entry.callType == CallType.incoming || entry.callType == CallType.missed
+                ? entry.number.toString().substring(3)
+                : "number",
+            fromCode: entry.callType == CallType.incoming || entry.callType == CallType.missed
+                ? entry.number.toString().substring(0,3)
+                : "number",
+            callTo: entry.number.toString().substring(3),
+            toCode: entry.number.toString().substring(0,3),
+
+            type: (entry.callType != CallType.missed) ? entry.callType.toString() : "missed-call",
+            callTiming: DateTime.fromMillisecondsSinceEpoch(entry.timestamp!).toString(),
+            startTime: DateTime.fromMillisecondsSinceEpoch(entry.timestamp!).toString(),
+            endTime: DateTime.fromMillisecondsSinceEpoch(entry.timestamp! + entry.duration!).toString()
+        ));
+        i++;
+      }
+      String encId = pref.getString("enc_id")!;
+      String encKey = pref.getString("enc_key")!;
+      String deviceToken = pref.getString("deviceToken")!;
+      CallLogData calldata = CallLogData(
+          encId: encId,
+          encKey: encKey,
+          deviceToken: deviceToken,
+          callData: callDatumList
+      );
+      await CallLogService().sendData(calldata);
+    }
+
 
 
 
@@ -183,15 +248,15 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
     // CurvedAnimation _c = CurvedAnimation( parent: _controller, curve: Curves.easeIn);
 
 
-    // return TweenAnimationBuilder(
-    //   // key: _tweenKey,
-    //
-    //
-    //   curve: Curves.easeIn,
-    //   tween: am.,
-    //   duration:  Duration(seconds: 5),
-    //   builder : (context, _ , child) {
-        double angle = 2 * pi * (selectedIndex - index - 2) / totalIcons;
+    return TweenAnimationBuilder(
+      // key: _tweenKey,
+
+
+      curve: Curves.easeIn,
+      tween: Tween<double>(begin:  (index - 1), end: index.toDouble() ),
+      duration:  Duration(seconds: 5),
+      builder : (context, _ , child) {
+        double angle = 2 * pi * (selectedIndex - _ - 2) / totalIcons;
         // double animValue = Curves.easeInOutBack.transform(_controller.value);
         double offsetX = 0 + radius * cos(angle );
         double offsetY = 0 + radius * sin(angle );
@@ -218,8 +283,8 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
             icon: icon,
           ),
         );
-    //   }
-    // );
+      }
+    );
   }
 
   // Widget _buildIconButton({required Widget icon, required int index}) {
@@ -967,8 +1032,8 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
           Positioned(
             left: MediaQuery.of(context).size.width * 0.07,
             right: MediaQuery.of(context).size.width * 0.07,
-            // bottom: -((MediaQuery.of(context).size.width * 0.86)* 0.71),
-            bottom: 0,
+            bottom: -((MediaQuery.of(context).size.width * 0.86)* 0.71),
+            // bottom: 0,
             child: Container(
               width: MediaQuery.of(context).size.width * 0.88,
               height: MediaQuery.of(context).size.width * 0.88,

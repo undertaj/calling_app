@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
 <!--    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>-->
 <!--    <uses-permission android:name="android.permission.BACKGROUND_SERVICE"/>-->
@@ -27,6 +28,14 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+<!--        <service-->
+<!--            android:name=".MyFirebaseMessagingService"-->
+<!--            android:stopWithTask="false"-->
+<!--            tools:targetApi="ice_cream_sandwich">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="com.google.firebase.MESSAGING_EVENT" />-->
+<!--            </intent-filter>-->
+<!--        </service>-->
 
 <!--        <service-->
 <!--            android:name="id.flutter.flutter_background_service.BackgroundService"-->

@@ -1,6 +1,11 @@
 import 'package:caller_app/view/home_page.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../services/auth_service.dart';
+import '../utils/const.dart';
 
 class LoginPage extends StatefulWidget {
   LoginPage({super.key});
@@ -13,6 +18,8 @@ class _LoginPageState extends State<LoginPage> {
   int _val = 1;
 
   bool check = false;
+  TextEditingController passwordController = TextEditingController();
+  TextEditingController mobileController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +79,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         TextField(
+                          controller: mobileController,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
                             filled: true,
@@ -112,6 +120,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         TextField(
                           obscureText: _val == 1 ? true : false,
+                          controller: passwordController,
                           decoration: InputDecoration(
                             suffixIcon: IconButton(
                                 icon: Icon(
@@ -168,7 +177,27 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     SizedBox(height: 44,),
                     InkWell(
-                      onTap: (){Navigator.push(context, MaterialPageRoute(builder: (context)=> HomeEpigle()));},
+                      onTap: () async {
+                        SharedPreferences pref = await SharedPreferences.getInstance();
+
+                        String deviceModel = await Const().getDeviceModel();
+                        pref.setString("deviceModel", deviceModel);
+                        final String deviceToken =(await FirebaseMessaging.instance.getToken()).toString();
+                        pref.setString("deviceToken", deviceToken);
+                        bool result = false;
+                        result = await AuthService().signIn(
+                            mobileController.text.toString(),
+                            passwordController.text.toString(),
+                        );
+                        if(result) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Success !!')));
+                          Navigator.push(context, MaterialPageRoute(
+                              builder: (context) => const HomeEpigle()));
+                        }
+                        else {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid Credentials')));
+                        }
+                      },
                       child: Container(
                         height: 45,
                         width: 129,
