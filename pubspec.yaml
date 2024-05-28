@@ -47,6 +47,8 @@ dependencies:
   firebase_messaging: ^14.9.2
   device_info_plus: ^10.1.0
   pretty_dio_logger: ^1.3.1
+  mobile_number: ^2.1.1
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:

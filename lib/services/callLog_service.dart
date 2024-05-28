@@ -26,6 +26,7 @@ class CallLogService {
         // print('call_data: ${data.callData.toString().substring(0, 100)}');
       }
       Map<String, dynamic> data1 = data.toJson();
+      data1['call_data'] = jsonEncode(data1['call_data']);
       if (kDebugMode) {
         print(data1.toString().substring(100,1000));
       }

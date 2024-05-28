@@ -9,6 +9,7 @@ class Api {
     BaseOptions(
       contentType: 'application/json',
       baseUrl: 'https://api.leadhornet.in/api/',
+
       // connectTimeout: const Duration(milliseconds: 5000),
       // receiveTimeout: const Duration(milliseconds: 50000),
 

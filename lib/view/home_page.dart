@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:mobile_number/mobile_number.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/callLog_service.dart';
@@ -60,15 +62,31 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
     //   begin: const Offset(0.0, -1.0), // Start position (top)
     //   end: const Offset(0.0, 0.0),    // End position (center)
     // ).animate(_controller);
-    getCalls();
+    getPermissionUser();
     print("Call log entries length = ${callLogEntries.length}");
     // _controller.forward(from: 0.7);
     // init();
     super.initState();
   }
 
-  void getCalls() async {
+  Future<List> getPermissionUser() async {
+    List<CallLogEntry> list = [];
+    if (await Permission.phone.request().isGranted) {
+      list.addAll(await getCalls());
+      return list;
+    } else {
+      await Permission.phone.request();
+    }
+    return list;
+  }
+
+  String getDateTime(DateTime date) {
+    return "${date.day}-${date.month}-${date.year} ${date.hour}:${date.minute}:${date.second}";
+  }
+
+  Future<List<CallLogEntry>> getCalls() async {
     callLogEntries = (await CallLog.get()).toList();
+
     // for(int i= 0; i < 0; i++) {
     //   var entry = callLogEntries[i];
     //   if(kDebugMode) {
@@ -100,23 +118,33 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
     if(true) {
       pref.setString("count", callLogEntries.length.toString());
       List<CallDatum> callDatumList = [];
-      int i = 0;
+      int i = 0, len;
+      List<SimCard>? sims = await MobileNumber.getSimCards;
+      Map<String?, String?> simMap = {};
+      sims?.forEach((element) {
+        simMap[element.displayName] = element.number;
+      });
       for(CallLogEntry entry in callLogEntries) {
         if(i == 5) break;
+        len = entry.number.toString().length;
         callDatumList.add(CallDatum(
             callFrom: entry.callType == CallType.incoming || entry.callType == CallType.missed
-                ? entry.number.toString().substring(3)
-                : "number",
+                ? (len > 10 ? entry.number.toString().substring(3) : entry.number.toString())
+                : simMap[entry.simDisplayName],
             fromCode: entry.callType == CallType.incoming || entry.callType == CallType.missed
-                ? entry.number.toString().substring(0,3)
-                : "number",
-            callTo: entry.number.toString().substring(3),
-            toCode: entry.number.toString().substring(0,3),
+                ? (len > 10 ? entry.number.toString().substring(0,3) : "N/A")
+                : (simMap[entry.simDisplayName]!.length > 10 ? simMap[entry.simDisplayName]!.substring(0,3) : "N/A"),
+            callTo: entry.callType == CallType.incoming || entry.callType == CallType.missed
+                ? simMap[entry.simDisplayName]
+                : (len > 10 ? entry.number.toString().substring(3) : entry.number.toString()),
+            toCode: entry.callType == CallType.incoming || entry.callType == CallType.missed
+                ? (simMap[entry.simDisplayName]!.length > 10 ? simMap[entry.simDisplayName]!.substring(0,3) : "N/A")
+                : (len > 10 ? entry.number.toString().substring(0,3) : "N/A"),
 
-            type: (entry.callType != CallType.missed) ? entry.callType.toString() : "missed-call",
-            callTiming: DateTime.fromMillisecondsSinceEpoch(entry.timestamp!).toString(),
-            startTime: DateTime.fromMillisecondsSinceEpoch(entry.timestamp!).toString(),
-            endTime: DateTime.fromMillisecondsSinceEpoch(entry.timestamp! + entry.duration!).toString()
+            type: (entry.callType != CallType.missed) ? entry.callType.toString().substring(8) : "missed-call",
+            callTiming: getDateTime(DateTime.fromMillisecondsSinceEpoch(entry.timestamp!)),
+            startTime: getDateTime(DateTime.fromMillisecondsSinceEpoch(entry.timestamp!)),
+            endTime: getDateTime(DateTime.fromMillisecondsSinceEpoch(entry.timestamp! + entry.duration!))
         ));
         i++;
       }
@@ -130,6 +158,7 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
           callData: callDatumList
       );
       await CallLogService().sendData(calldata);
+      return callLogEntries;
     }
 
 
@@ -551,7 +580,7 @@ class _HomeEpigleState extends State<HomeEpigle> with SingleTickerProviderStateM
           // ),
           FutureBuilder(
 
-            future: CallLog.get(),
+            future: getPermissionUser(),
             builder: (context, snapshot) {
 
             return CustomScrollView(
